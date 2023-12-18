@@ -9,23 +9,20 @@ using System.IO;
 
 public class Remake : Game
 {
-    private GraphicsDeviceManager graphics;
-
+    private GraphicsDeviceManager graphic;
     private string saveFilePath = "save.txt";
     private SpriteBatch spriteBatch;
     private KeyboardState keyboardState;
     private Random random = new Random();
-
     private bool isPaused = false;
-
-
     private int score = 0;
+    private bool isSpaceKeyPressedLastFrame = false;
     private float elapsedTimeSinceLastScoreIncrement = 0f;
 
     private struct ParallaxData
     {
-        public Song gameMusic;
-        public SoundEffect jumpMusic;
+        public Song GameMusic;
+        public SoundEffect JumpMusic;
     }
 
     private struct ParallaxTextures
@@ -62,75 +59,55 @@ public class Remake : Game
     }
 
     private ParallaxData data;
-
     private bool gameOver = false;
     private Texture2D gameOverTexture;
-
     private ParallaxTextures textures;
     private ParallaxPositions positions;
     private ParallaxScales scales;
     private Rectangle frame;
 
     private int LoadBestScore()
-{
-    int bestScore = 0;
-
-    if (File.Exists(saveFilePath))
     {
-        using (StreamReader reader = new StreamReader(saveFilePath))
+        int bestScore = 0;
+
+        if (File.Exists(saveFilePath))
         {
-           
-            string bestScoreString = reader.ReadLine();
-            if (int.TryParse(bestScoreString, out int savedBestScore))
+            using (StreamReader reader = new StreamReader(saveFilePath))
             {
-                bestScore = savedBestScore;
+                string bestScoreString = reader.ReadLine();
+                if (int.TryParse(bestScoreString, out int savedBestScore))
+                {
+                    bestScore = savedBestScore;
+                }
             }
         }
+
+        return bestScore;
     }
 
-    return bestScore;
-}
-
-
-private int LoadIntValue(StreamReader reader)
-{
-    string valueString = reader.ReadLine();
-    return int.TryParse(valueString, out int value) ? value : 0;
-}
-
-
     private List<Vector2> fireballs;
-    private List<Enemy> enemies; 
-
+    private List<Enemy> enemies;
     private List<Enemy> enemiesToRemove;
     private Texture2D fireballTexture;
     private const float FireballSpeed = 500f;
-    private const float FireballCooldown = 0.5f;
+    private const float FireballCooldown = 3f;
     private float currentFireballCooldown = 0f;
-
     private int bestScore = 0;
-
-
-    private const float EnemySpeed = 200f; 
-    private const float EnemySpawnInterval = 2f; 
-    private float enemySpawnTimer = 0f;
-
-    private float enemySpawnInterval = 2f;
-
+    private const float EnemySpeed = 300f;
+    private float enemySpawnTimer = 200f;
+    private float enemySpawnInterval = 0f;
     private int frameCounter = 0;
     private int framesToSkip = 4;
     private int spriteWidth = 109;
-    private int totalSprites = 8;
-
+    private int totalSprite = 8;
     private const float ParallaxCSpeed = 10f;
     private const float ParallaxBSpeed = 5f;
     private const float ParallaxDSpeed = 15f;
-
     private SpriteFont font;
 
     public Remake()
     {
-        graphics = new GraphicsDeviceManager(this);
+        graphic = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
@@ -142,62 +119,53 @@ private int LoadIntValue(StreamReader reader)
         IsFixedTimeStep = true;
         TargetElapsedTime = TimeSpan.FromMilliseconds(16);
         positions.PosB.Y = 0;
-        graphics.PreferredBackBufferWidth = 1200;
-        graphics.PreferredBackBufferHeight = 600;
-        graphics.ApplyChanges();
-        InitializeFireballs();
-        InitializeEnemies();
+        graphic.PreferredBackBufferWidth = 1200;
+        graphic.PreferredBackBufferHeight = 600;
+        graphic.ApplyChanges();
+        InitializeFireball();
+        InitializeEnemie();
     }
 
     protected override void LoadContent()
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        LoadTextures();
+        LoadTexture();
         LoadSound();
         LoadFireballTexture();
-        font = Content.Load<SpriteFont>("Arial"); 
+        font = Content.Load<SpriteFont>("Arial");
 
         MediaPlayer.Volume = 0.3f;
         MediaPlayer.IsRepeating = true;
-        MediaPlayer.Play(data.gameMusic);
+        MediaPlayer.Play(data.GameMusic);
 
         frame = new Rectangle(0, 0, 109, 130);
 
         MakeSpace();
-
         LoadGame();
     }
 
-    private const string SaveFileName = "save.txt";
-
-private void SaveGame()
-{
-    using (StreamWriter writer = new StreamWriter(saveFilePath))
+    private void SaveGame()
     {
-       
-        writer.WriteLine(score);
-
-        
-        writer.WriteLine(bestScore);
-        
+        using (StreamWriter writer = new StreamWriter(saveFilePath))
+        {
+            writer.WriteLine(score);
+            writer.WriteLine(bestScore);
+        }
     }
-}
 
-
-private void LoadGame()
+    private void LoadGame()
     {
         if (File.Exists(saveFilePath))
         {
             using (StreamReader reader = new StreamReader(saveFilePath))
             {
-               
                 string scoreString = reader.ReadLine();
                 if (int.TryParse(scoreString, out int savedScore))
                 {
                     score = savedScore;
                 }
-                
+
                 string bestScoreString = reader.ReadLine();
                 if (int.TryParse(bestScoreString, out int savedBestScore))
                 {
@@ -207,7 +175,7 @@ private void LoadGame()
         }
     }
 
-    private void LoadTextures()
+    private void LoadTexture()
     {
         textures.TextureA = Content.Load<Texture2D>("texture/parallax3");
         textures.TextureB = Content.Load<Texture2D>("texture/parallax2");
@@ -216,13 +184,12 @@ private void LoadGame()
         textures.TextureP = Content.Load<Texture2D>("texture/player");
         textures.TextureEnemy = Content.Load<Texture2D>("texture/ped");
         gameOverTexture = Content.Load<Texture2D>("texture/gameover");
-
     }
 
     private void LoadSound()
     {
-        data.gameMusic = Content.Load<Song>("music/game_music");
-        data.jumpMusic = Content.Load<SoundEffect>("sound/jump_music");
+        data.GameMusic = Content.Load<Song>("music/game_music");
+        data.JumpMusic = Content.Load<SoundEffect>("sound/jump_music");
     }
 
     private void LoadFireballTexture()
@@ -230,15 +197,15 @@ private void LoadGame()
         fireballTexture = Content.Load<Texture2D>("texture/boule");
     }
 
-    private void InitializeFireballs()
+    private void InitializeFireball()
     {
         fireballs = new List<Vector2>();
     }
 
-    private void InitializeEnemies()
+    private void InitializeEnemie()
     {
         enemies = new List<Enemy>();
-        enemiesToRemove = new List<Enemy>(); 
+        enemiesToRemove = new List<Enemy>();
     }
 
     private void AdjustSpeed()
@@ -247,7 +214,7 @@ private void LoadGame()
         if (frameCounter >= framesToSkip)
         {
             frame.X += spriteWidth;
-            if (frame.X >= spriteWidth * totalSprites)
+            if (frame.X >= spriteWidth * totalSprite)
             {
                 frame.X = 0;
             }
@@ -255,171 +222,132 @@ private void LoadGame()
         }
     }
 
-protected override void Update(GameTime gameTime)
-{
-    keyboardState = Keyboard.GetState();
-
-   
-    HandlePauseInput();
-
-    if (!isPaused && !gameOver)
+    protected override void Update(GameTime gameTime)
     {
-        AdjustSpeed();
-        UpdateFireballs(gameTime);
-        MoveParallaxD();
-        MoveParallaxC();
-        MoveParallaxB();
-        UpdateFireballCooldown(gameTime);
+        keyboardState = Keyboard.GetState();
+        HandlePauseInput();
 
-        
-        elapsedTimeSinceLastScoreIncrement += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-        
-        if (elapsedTimeSinceLastScoreIncrement >= 0.1f)
+        if (!isPaused && !gameOver)
         {
-            score++;
-            elapsedTimeSinceLastScoreIncrement = 0f; 
-        }
+            AdjustSpeed();
+            UpdateFireball(gameTime);
+            MoveParallaxD();
+            MoveParallaxC();
+            MoveParallaxB();
+            UpdateFireballCooldown(gameTime);
 
-       
-        enemySpawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            elapsedTimeSinceLastScoreIncrement += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        if (enemySpawnTimer > enemySpawnInterval)
-        {
-            CreateEnemies(gameTime);
-        }
-
-        UpdateEnemies(gameTime);
-
-        
-        CheckCollisionsWithEnemies();
-    }
-
-    
-    if (keyboardState.IsKeyDown(Keys.Enter) && gameOver)
-    {
-        ResetGame(); 
-        
-        
-        RestartGame();
-    }
-
-    base.Update(gameTime);
-}
-
-
-
-
-private void ResetGame()
-{
-   
-    score = 0;
-    elapsedTimeSinceLastScoreIncrement = 0f;
-    gameOver = false;
-    MediaPlayer.Resume(); 
-    InitializeEnemies(); 
-    
-
-    
-    bestScore = LoadBestScore();
-
-    
-
-    
-    MakeSpace();
-}
-private void CheckCollisionsWithEnemies()
-{
-    Rectangle playerRectangle = new Rectangle(
-        (int)(positions.PosP.X),
-        (int)(GraphicsDevice.Viewport.Height - frame.Height * scales.ScaleP.Y - 100),
-        (int)(frame.Width * scales.ScaleP.X),
-        (int)(frame.Height * scales.ScaleP.Y));
-
-    foreach (Enemy enemy in enemies)
-    {
-        Rectangle enemyRectangle = new Rectangle(
-            (int)enemy.Position.X,
-            (int)enemy.Position.Y,
-            enemy.Texture.Width,
-            enemy.Texture.Height);
-
-        if (playerRectangle.Intersects(enemyRectangle))
-        {
-           
-            gameOver = true;
-            MediaPlayer.Pause(); 
-
-            
-            if (score > bestScore)
+            if (elapsedTimeSinceLastScoreIncrement >= 0.1f)
             {
-                bestScore = score;
-                SaveGame(); 
+                score++;
+                elapsedTimeSinceLastScoreIncrement = 0f;
+            }
+
+            enemySpawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (enemySpawnTimer > enemySpawnInterval)
+            {
+                CreateEnemie(gameTime);
+            }
+
+            UpdateEnemie(gameTime);
+            CheckCollisionsWithEnemie();
+        }
+
+        if (keyboardState.IsKeyDown(Keys.Enter) && gameOver)
+        {
+            ResetGame();
+            RestartGame();
+        }
+
+        base.Update(gameTime);
+    }
+
+    private void ResetGame()
+    {
+        score = 0;
+        elapsedTimeSinceLastScoreIncrement = 0f;
+        gameOver = false;
+        MediaPlayer.Resume();
+        InitializeEnemie();
+        bestScore = LoadBestScore();
+
+        MakeSpace();
+    }
+    private void CheckCollisionsWithEnemie()
+    {
+        Rectangle playerRectangle = new Rectangle(
+            (int)(positions.PosP.X),
+            (int)(GraphicsDevice.Viewport.Height - frame.Height * scales.ScaleP.Y - 100),
+            (int)(frame.Width * scales.ScaleP.X),
+            (int)(frame.Height * scales.ScaleP.Y));
+
+        foreach (Enemy enemy in enemies)
+        {
+            Rectangle enemyRectangle = new Rectangle(
+                (int)enemy.Position.X,
+                (int)enemy.Position.Y,
+                enemy.Texture.Width,
+                enemy.Texture.Height);
+
+            if (playerRectangle.Intersects(enemyRectangle))
+            {
+                gameOver = true;
+                MediaPlayer.Pause();
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    SaveGame();
+                }
             }
         }
     }
-}
-
-
-
-private bool isSpaceKeyPressedLastFrame = false; 
-
-private void HandlePauseInput()
-{
-    KeyboardState currentKeyboardState = Keyboard.GetState();
-
-    if (currentKeyboardState.IsKeyDown(Keys.Space) && !isSpaceKeyPressedLastFrame)
+    private void HandlePauseInput()
     {
-        
-        isPaused = !isPaused;
+        KeyboardState currentKeyboardState = Keyboard.GetState();
 
-        
-        if (isPaused)
+        if (currentKeyboardState.IsKeyDown(Keys.Space) && !isSpaceKeyPressedLastFrame)
         {
-            MediaPlayer.Pause();
-            SaveGame();
-{
-    keyboardState = Keyboard.GetState();
+            isPaused = !isPaused;
 
-    if (keyboardState.IsKeyDown(Keys.Escape))
-    {
-        SaveGame();
-        Exit();
-    }
+            if (isPaused)
+            {
+                MediaPlayer.Pause();
+                SaveGame();
+                {
+                    keyboardState = Keyboard.GetState();
 
-    if (keyboardState.IsKeyDown(Keys.Enter) && gameOver)
-    {
-       
-        
-        RestartGame();
-    }
-}
+                    if (keyboardState.IsKeyDown(Keys.Escape))
+                    {
+                        SaveGame();
+                        Exit();
+                    }
+
+                    if (keyboardState.IsKeyDown(Keys.Enter) && gameOver)
+                    {
+                        RestartGame();
+                    }
+                }
+            }
+            else
+            {
+                MediaPlayer.Resume();
+            }
         }
-        else
-        {
-           
-            MediaPlayer.Resume();
-        }
+        isSpaceKeyPressedLastFrame = currentKeyboardState.IsKeyDown(Keys.Space);
     }
 
-   
-    isSpaceKeyPressedLastFrame = currentKeyboardState.IsKeyDown(Keys.Space);
-}
-
-    private void UpdateEnemies(GameTime gameTime)
+    private void UpdateEnemie(GameTime gameTime)
     {
         enemySpawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-
         List<Enemy> enemiesToRemove = new List<Enemy>();
 
         for (int i = 0; i < enemies.Count; i++)
         {
-            Enemy currentEnemy = enemies[i]; 
-
-
+            Enemy currentEnemy = enemies[i];
             currentEnemy.Position.X -= EnemySpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
-
 
             foreach (Vector2 fireball in fireballs)
             {
@@ -428,29 +356,22 @@ private void HandlePauseInput()
 
                 if (enemyRectangle.Intersects(fireballRectangle))
                 {
-                    
                     enemiesToRemove.Add(currentEnemy);
                 }
             }
-
-            
             if (currentEnemy.Position.X + currentEnemy.Texture.Width < 0)
             {
                 enemiesToRemove.Add(currentEnemy);
             }
-
-            
             enemies[i] = currentEnemy;
         }
-
-        
         foreach (Enemy enemyToRemove in enemiesToRemove)
         {
             enemies.Remove(enemyToRemove);
         }
     }
 
-    private void CheckCollisionsWithEnemies(Vector2 fireballPosition)
+    private void CheckCollisionsWithEnemie(Vector2 fireballPosition)
     {
         Rectangle fireballRectangle = new Rectangle((int)fireballPosition.X, (int)fireballPosition.Y, 30, 30);
 
@@ -458,30 +379,24 @@ private void HandlePauseInput()
         {
             Enemy enemy = enemies[i];
             Rectangle enemyRectangle = new Rectangle((int)enemy.Position.X, (int)enemy.Position.Y, 150, 150);
-
-            
             if (fireballRectangle.Intersects(enemyRectangle))
             {
-                
                 enemiesToRemove.Add(enemy);
-
-                
                 fireballs.RemoveAt(i);
             }
         }
     }
 
-    private void CreateEnemies(GameTime gameTime)
+    private void CreateEnemie(GameTime gameTime)
     {
         enemySpawnTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
         if (enemySpawnTimer > enemySpawnInterval)
         {
-           
             Enemy newEnemy = new Enemy
             {
                 Position = new Vector2(GraphicsDevice.Viewport.Width, GetRandomYForEnemy()),
-                Texture = textures.TextureEnemy 
+                Texture = textures.TextureEnemy
             };
 
             float offsetX = 350f;
@@ -491,9 +406,8 @@ private void HandlePauseInput()
 
             enemies.Add(newEnemy);
 
-           
             enemySpawnTimer = 0f;
-            enemySpawnInterval = (float)random.NextDouble() * 2.0f + 0.5f; 
+            enemySpawnInterval = (float)random.NextDouble() * 2.0f + 0.5f;
         }
     }
 
@@ -503,8 +417,6 @@ private void HandlePauseInput()
 
         if (maxY < 0)
         {
-            
-            
             return 0;
         }
 
@@ -519,7 +431,7 @@ private void HandlePauseInput()
         }
     }
 
-    private void UpdateFireballs(GameTime gameTime)
+    private void UpdateFireball(GameTime gameTime)
     {
         for (int i = fireballs.Count - 1; i >= 0; i--)
         {
@@ -530,7 +442,6 @@ private void HandlePauseInput()
                 fireballs.RemoveAt(i);
             }
         }
-
         if (keyboardState.IsKeyDown(Keys.Right) && currentFireballCooldown <= 0)
         {
             FireFireball();
@@ -539,59 +450,45 @@ private void HandlePauseInput()
     }
 
     protected override void Draw(GameTime gameTime)
-{
-    GraphicsDevice.Clear(Color.CornflowerBlue);
-
-    spriteBatch.Begin();
-
-    if (isPaused)
     {
-        
-        string pauseText = "Pause";
-        Vector2 pauseTextPosition = new Vector2((GraphicsDevice.Viewport.Width - font.MeasureString(pauseText).X) / 2, (GraphicsDevice.Viewport.Height - font.MeasureString(pauseText).Y) / 2);
-        spriteBatch.DrawString(font, pauseText, pauseTextPosition, Color.White);
+        GraphicsDevice.Clear(Color.CornflowerBlue);
+
+        spriteBatch.Begin();
+
+        if (isPaused)
+        {
+            string pauseText = "Pause";
+            Vector2 pauseTextPosition = new Vector2((GraphicsDevice.Viewport.Width - font.MeasureString(pauseText).X) / 2, (GraphicsDevice.Viewport.Height - font.MeasureString(pauseText).Y) / 2);
+            spriteBatch.DrawString(font, pauseText, pauseTextPosition, Color.White);
+        }
+        else if (gameOver)
+        {
+            float gameOverScale = 0.55f;
+            int newWidth = (int)(gameOverTexture.Width * gameOverScale);
+            int newHeight = (int)(gameOverTexture.Height * gameOverScale);
+            Vector2 gameOverPosition = new Vector2((GraphicsDevice.Viewport.Width - newWidth) / 2, (GraphicsDevice.Viewport.Height - newHeight) / 2);
+
+            spriteBatch.Draw(gameOverTexture, new Rectangle((int)gameOverPosition.X, (int)gameOverPosition.Y, newWidth, newHeight), Color.White);
+        }
+        else
+        {
+            RenderParallax();
+            DrawFireball();
+            DrawEnemie();
+
+            string scoreText = "Score: " + score;
+            Vector2 scoreSize = font.MeasureString(scoreText);
+            Vector2 scorePosition = new Vector2(10, 10);
+            spriteBatch.DrawString(font, scoreText, scorePosition, Color.White);
+            string bestScoreText = "Best Score: " + bestScore;
+            Vector2 bestScoreSize = font.MeasureString(bestScoreText);
+            Vector2 bestScorePosition = new Vector2(10, 10 + scoreSize.Y + 5);
+            spriteBatch.DrawString(font, bestScoreText, bestScorePosition, Color.White);
+        }
+        spriteBatch.End();
+
+        base.Draw(gameTime);
     }
-    else if (gameOver)
-    {
-        
-        float gameOverScale = 0.55f; 
-
-        
-        int newWidth = (int)(gameOverTexture.Width * gameOverScale);
-        int newHeight = (int)(gameOverTexture.Height * gameOverScale);
-
-        
-        Vector2 gameOverPosition = new Vector2((GraphicsDevice.Viewport.Width - newWidth) / 2, (GraphicsDevice.Viewport.Height - newHeight) / 2);
-
-        
-        spriteBatch.Draw(gameOverTexture, new Rectangle((int)gameOverPosition.X, (int)gameOverPosition.Y, newWidth, newHeight), Color.White);
-    }
-    else
-    {
-        
-        RenderParallax();
-        DrawFireballs();
-        DrawEnemies();
-
-        
-        string scoreText = "Score: " + score;
-        Vector2 scoreSize = font.MeasureString(scoreText);
-        Vector2 scorePosition = new Vector2(10, 10); 
-        spriteBatch.DrawString(font, scoreText, scorePosition, Color.White); 
-
-        
-        string bestScoreText = "Best Score: " + bestScore;
-        Vector2 bestScoreSize = font.MeasureString(bestScoreText);
-        Vector2 bestScorePosition = new Vector2(10, 10 + scoreSize.Y + 5); 
-        spriteBatch.DrawString(font, bestScoreText, bestScorePosition, Color.White);
-    }
-
-    spriteBatch.End();
-
-    base.Draw(gameTime);
-}
-
-
 
     private void MakeSpace()
     {
@@ -617,7 +514,6 @@ private void HandlePauseInput()
     private void MoveParallaxB()
     {
         positions.PosB.X -= ParallaxBSpeed;
-
         float scaledWidthB = GetScaledWidth(textures.TextureB, scales.ScaleB);
 
         if (positions.PosB.X + scaledWidthB <= 1200)
@@ -629,7 +525,6 @@ private void HandlePauseInput()
     private void MoveParallaxD()
     {
         positions.PosD.X -= ParallaxDSpeed;
-
         float scaledWidthD = GetScaledWidth(textures.TextureD, scales.ScaleD);
 
         if (positions.PosD.X + scaledWidthD <= 1200)
@@ -653,7 +548,7 @@ private void HandlePauseInput()
         spriteBatch.Draw(textures.TextureP, new Vector2((GraphicsDevice.Viewport.Width - frame.Width * scales.ScaleP.X) / 2, GraphicsDevice.Viewport.Height - frame.Height * scales.ScaleP.Y - 100), frame, Color.White, 0f, Vector2.Zero, scales.ScaleP, SpriteEffects.None, 0f);
     }
 
-    private void DrawFireballs()
+    private void DrawFireball()
     {
         foreach (Vector2 fireball in fireballs)
         {
@@ -661,7 +556,7 @@ private void HandlePauseInput()
         }
     }
 
-    private void DrawEnemies()
+    private void DrawEnemie()
     {
         foreach (Enemy enemy in enemies)
         {
@@ -677,29 +572,29 @@ private void HandlePauseInput()
         fireballs.Add(new Vector2(positions.PosP.X + frame.Width * scales.ScaleP.X + offsetX, positions.PosP.Y + frame.Height * scales.ScaleP.Y / 2 + offsetY));
     }
 
-    private void HandleEvents()
-{
-    keyboardState = Keyboard.GetState();
-
-    if (keyboardState.IsKeyDown(Keys.Escape))
+    private void HandleEvent()
     {
-        SaveGame();
-        Exit();
+        keyboardState = Keyboard.GetState();
+
+        if (keyboardState.IsKeyDown(Keys.Escape))
+        {
+            SaveGame();
+            Exit();
+        }
+
+        if (keyboardState.IsKeyDown(Keys.Enter) && gameOver)
+        {
+            LoadGame();
+            RestartGame();
+        }
     }
 
-    if (keyboardState.IsKeyDown(Keys.Enter) && gameOver)
+    private void RestartGame()
     {
-        LoadGame();
-        RestartGame();
-    }
-}
+        ResetGame();
 
-private void RestartGame()
-{
-    ResetGame(); 
-    
-    InitializeFireballs();
-    MediaPlayer.Play(data.gameMusic);
-}
+        InitializeFireball();
+        MediaPlayer.Play(data.GameMusic);
+    }
 
 }
